@@ -1,11 +1,12 @@
-const user_model = (name,age,contactNo,username,password)=>{
+const user_model = (name,birthDate,contactNo,username,password, uStat)=>{
 
 let User = {
     user_name: name,
-    user_age: age,
+    user_birthDate: birthDate,
     user_contactNo: contactNo,
     username: username,
-    password: password
+    password: password,
+    user_status: uStat
 }
 
 return User

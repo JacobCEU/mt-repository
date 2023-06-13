@@ -3,12 +3,12 @@ const database = require('../models/connection_db');
 
 const addUser = async (req, res, next) => {
   let userName = req.body.name;
-  let userAge = req.body.age;
+  let userBirth = req.body.birthDate;
   let userContactNo = req.body.contact;
   let username = req.body.username;
   let password = req.body.password;
 
-  if (userName === '' || userName === null || userAge === '' || userAge === null || userContactNo === '' || userContactNo === null || username === '' || username === null || password === '' || password === null ) {
+  if ( userName === '' || userName === null || userBirth === '' || userBirth === null || userContactNo === '' || userContactNo === null || username === '' || username === null || password === '' || password === null ) {
     res.status(404).json({
       successful: false,
       message: 'User has incomplete credentials.',
@@ -43,22 +43,61 @@ const addUser = async (req, res, next) => {
                   message: 'This username already exists.',
                 });
               } else {
-                let insertQuery = `INSERT INTO user_tbl (user_name, user_age, user_contactNo, username, password) VALUES (?, ?, ?, ?, ?)`;
-                let hashedPassword = await bcrypt.hash(password, 10);
-
-                database.db.query(insertQuery, [userName, userAge, userContactNo, username, hashedPassword], (err, rows) => {
-                  if (err) {
-                    res.status(500).json({
-                      successful: false,
-                      message: err,
-                    });
-                  } else {
-                    res.status(200).json({
-                      successful: true,
-                      message: 'Successfully signed up new user!',
-                    });
+                if (password.length < 7) {
+                  res.status(400).json({
+                    successful: false,
+                    message: 'Password is too weak, please enter more than 7 characters.',
+                  });
+                } else if (!/\d/.test(password)) {
+                  res.status(400).json({
+                    successful: false,
+                    message: 'Password must contain at least 1 numerical character, please try again.',
+                  });
+                } else if (!userContactNo.startsWith('+63')) {
+                  res.status(400).json({
+                    successful: false,
+                    message: "A Philippine contact number is required starting with '+63'.",
+                  });
+                } else if (userContactNo.length !== 13) {
+                  res.status(400).json({
+                    successful: false,
+                    message: 'That is not a valid contact number length.',
+                  });
+                } else if (!/^\+?[0-9]+$/.test(userContactNo)) {
+                  res.status(400).json({
+                    successful: false,
+                    message: 'That is not a valid contact number.',
+                  });
+                } else {
+                  let today = new Date();
+                  let birthDate = new Date(userBirth);
+                  let age = today.getFullYear() - birthDate.getFullYear();
+                  let monthDiff = today.getMonth() - birthDate.getMonth();
+                  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+                    age--;
                   }
-                });
+
+                  let insertQuery = `INSERT INTO user_tbl (user_name, user_birthDate, user_age, user_contactNo, username, password, user_status) VALUES (?, ?, ?, ?, ?, ?, ?)`;
+                  let hashedPassword = await bcrypt.hash(password, 10);
+
+                  database.db.query(
+                    insertQuery,
+                    [userName, userBirth, age, userContactNo, username, hashedPassword, 'Active'],
+                    (err, rows) => {
+                      if (err) {
+                        res.status(500).json({
+                          successful: false,
+                          message: err,
+                        });
+                      } else {
+                        res.status(200).json({
+                          successful: true,
+                          message: 'Successfully signed up new user!',
+                        });
+                      }
+                    }
+                  );
+                }
               }
             }
           });
@@ -67,6 +106,8 @@ const addUser = async (req, res, next) => {
     });
   }
 };
+
+
  
 const login = async (req, res, next) => {
   let username = req.body.username;
@@ -116,7 +157,7 @@ const login = async (req, res, next) => {
 
  //view all user details
 const viewAllUser = (req,res,next)=>{
-    let query = `SELECT user_id, username, password, user_name, user_age, user_contactNo FROM user_tbl`
+    let query = `SELECT user_id, username, user_name, user_contactNo, user_status FROM user_tbl`
     database.db.query(query, (err, rows, result)=>{
         if (err){
             res.status(500).json({
@@ -146,7 +187,7 @@ const viewAllUser = (req,res,next)=>{
 
   const userId = req.params.id;
 
-    let query = `SELECT user_name, user_contactNo, user_age, username, password FROM user_tbl WHERE user_id = ${userId}`;
+    let query = `SELECT user_name, username, user_contactNo, user_birthDate, user_age, user_status FROM user_tbl WHERE user_id = ${userId}`;
     database.db.query(query, (err, rows, result)=>{
         if (err){
             res.status(500).json({
@@ -174,17 +215,10 @@ const viewAllUser = (req,res,next)=>{
   //update
   const updateUser = (req, res, next) => {
     const userId = req.params.id;
-    const userContactNo = req.body.contact;
+    const username = req.body.username;
     const password = req.body.password;
   
-    if (
-      userId === '' ||
-      userId === null ||
-      userContactNo === '' ||
-      userContactNo === null ||
-      password === '' ||
-      password === null
-    ) {
+    if (userId === '' || userId === null || password === '' || password === null || username === '' || username === null) {
       return res.status(400).json({
         successful: false,
         message: 'Some inputs are missing',
@@ -207,7 +241,8 @@ const viewAllUser = (req,res,next)=>{
         });
       }
   
-      bcrypt.hash(password, 10, (err, hashedPassword) => {
+      const usernameCheckQuery = `SELECT user_id FROM user_tbl WHERE username = '${username}' AND user_id != ${userId}`;
+      database.db.query(usernameCheckQuery, (err, usernameRows) => {
         if (err) {
           return res.status(500).json({
             successful: false,
@@ -215,8 +250,15 @@ const viewAllUser = (req,res,next)=>{
           });
         }
   
-        const updateQuery = `UPDATE user_tbl SET user_contactNo = '${userContactNo}', password = '${hashedPassword}' WHERE user_id = ${userId}`;
-        database.db.query(updateQuery, (err, updatedRows) => {
+        if (usernameRows.length > 0) {
+          return res.status(400).json({
+            successful: false,
+            message: 'This username already exists.',
+          });
+        }
+  
+        const passwordCheckQuery = `SELECT password FROM user_tbl WHERE user_id = ${userId}`;
+        database.db.query(passwordCheckQuery, (err, passwordRows) => {
           if (err) {
             return res.status(500).json({
               successful: false,
@@ -224,14 +266,64 @@ const viewAllUser = (req,res,next)=>{
             });
           }
   
-          res.status(200).json({
-            successful: true,
-            message: 'User successfully updated.',
+          bcrypt.compare(password, passwordRows[0].password, (err, passwordMatch) => {
+            if (err) {
+              return res.status(500).json({
+                successful: false,
+                message: err,
+              });
+            }
+  
+            if (passwordMatch) {
+              return res.status(400).json({
+                successful: false,
+                message: 'New password cannot be same as current password',
+              });
+            }
+  
+            if (password.length < 7) {
+              return res.status(400).json({
+                successful: false,
+                message: 'Password is too weak, please enter more than 7 characters.',
+              });
+            }
+  
+            if (!/\d/.test(password)) {
+              return res.status(400).json({
+                successful: false,
+                message: 'Password must contain at least 1 numerical character, please try again.',
+              });
+            }
+  
+            bcrypt.hash(password, 10, (err, hashedPassword) => {
+              if (err) {
+                return res.status(500).json({
+                  successful: false,
+                  message: err,
+                });
+              }
+  
+              const updateQuery = `UPDATE user_tbl SET username = '${username}', password = '${hashedPassword}' WHERE user_id = ${userId}`;
+              database.db.query(updateQuery, (err, updatedRows) => {
+                if (err) {
+                  return res.status(500).json({
+                    successful: false,
+                    message: err,
+                  });
+                }
+  
+                res.status(200).json({
+                  successful: true,
+                  message: 'User successfully updated.',
+                });
+              });
+            });
           });
         });
       });
     });
   };
+  
 
 //delete
 const deleteUser = (req, res, next) => {

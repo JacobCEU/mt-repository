@@ -7,11 +7,12 @@ const addTransaction = (req,res,next)=>{
 
     const userId = req.params.id;
 
+    let storeId = req.body.store;
     let transRec = req.body.rec;
     let transAmt = req.body.amt;
     let transDate = req.body.date;
 
-    if (transAmt == "" || transAmt == null || transDate == "" || transDate == null || transRec == "" || transRec == null) {
+    if (storeId == "" || storeId == null || transAmt == "" || transAmt == null || transDate == "" || transDate == null || transRec == "" || transRec == null) {
         res.status(404).json({
             successful: false,
             message: "Invalid transaction input./Missing transaction info."
@@ -36,7 +37,7 @@ const addTransaction = (req,res,next)=>{
                 }
                 else{
                     let insertQuery = `INSERT INTO transaction_tbl SET ?`
-                    let transactionObj = transactionModel.transaction_model(transId, userId, transRec, transAmt, transDate)
+                    let transactionObj = transactionModel.transaction_model(transId, userId, storeId, transRec, transAmt, transDate)
 
                     database.db.query(insertQuery, transactionObj, (err,rows,result)=>{
                         if (err){
