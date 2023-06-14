@@ -6,7 +6,6 @@ const transactionRouter = express.Router();
 // Other routes
 transactionRouter.post('/add-transaction/:id', transactionController.addTransaction);
 transactionRouter.get('/view/:id', transactionController.viewAllTransaction);
-transactionRouter.put('/update/:id', transactionController.updateTransaction);
-transactionRouter.delete('/delete/:id', transactionController.deleteTransaction);
+transactionRouter.put('/status/:id', transactionController.cancelTransaction);
 
 module.exports = transactionRouter;

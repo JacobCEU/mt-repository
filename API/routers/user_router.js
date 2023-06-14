@@ -11,6 +11,6 @@ userRouter.post('/add-user', userController.addUser);
 userRouter.get('/view/all', userController.viewAllUser);
 userRouter.get('/view/:id', userController.viewUserDetails);
 userRouter.put('/update/:id', userController.updateUser);
-userRouter.delete('/delete/:id', userController.deleteUser);
+userRouter.put('/status/:id', userController.statUser);
 
 module.exports = userRouter;

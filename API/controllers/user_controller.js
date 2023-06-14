@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const database = require('../models/connection_db');
 
+//sign up user
 const addUser = async (req, res, next) => {
   let userName = req.body.name;
   let userBirth = req.body.birthDate;
@@ -8,7 +9,18 @@ const addUser = async (req, res, next) => {
   let username = req.body.username;
   let password = req.body.password;
 
-  if ( userName === '' || userName === null || userBirth === '' || userBirth === null || userContactNo === '' || userContactNo === null || username === '' || username === null || password === '' || password === null ) {
+  if (
+    userName === '' ||
+    userName === null ||
+    userBirth === '' ||
+    userBirth === null ||
+    userContactNo === '' ||
+    userContactNo === null ||
+    username === '' ||
+    username === null ||
+    password === '' ||
+    password === null
+  ) {
     res.status(404).json({
       successful: false,
       message: 'User has incomplete credentials.',
@@ -77,26 +89,33 @@ const addUser = async (req, res, next) => {
                     age--;
                   }
 
-                  let insertQuery = `INSERT INTO user_tbl (user_name, user_birthDate, user_age, user_contactNo, username, password, user_status) VALUES (?, ?, ?, ?, ?, ?, ?)`;
-                  let hashedPassword = await bcrypt.hash(password, 10);
+                  if (age < 18) {
+                    res.status(400).json({
+                      successful: false,
+                      message: 'You must be 18 years or older to register.',
+                    });
+                  } else {
+                    let insertQuery = `INSERT INTO user_tbl (user_name, user_birthDate, user_age, user_contactNo, username, password, user_status) VALUES (?, ?, ?, ?, ?, ?, ?)`;
+                    let hashedPassword = await bcrypt.hash(password, 10);
 
-                  database.db.query(
-                    insertQuery,
-                    [userName, userBirth, age, userContactNo, username, hashedPassword, 'Active'],
-                    (err, rows) => {
-                      if (err) {
-                        res.status(500).json({
-                          successful: false,
-                          message: err,
-                        });
-                      } else {
-                        res.status(200).json({
-                          successful: true,
-                          message: 'Successfully signed up new user!',
-                        });
+                    database.db.query(
+                      insertQuery,
+                      [userName, userBirth, age, userContactNo, username, hashedPassword, 'Active'],
+                      (err, rows) => {
+                        if (err) {
+                          res.status(500).json({
+                            successful: false,
+                            message: err,
+                          });
+                        } else {
+                          res.status(200).json({
+                            successful: true,
+                            message: 'Successfully signed up new user!',
+                          });
+                        }
                       }
-                    }
-                  );
+                    );
+                  }
                 }
               }
             }
@@ -108,7 +127,7 @@ const addUser = async (req, res, next) => {
 };
 
 
- 
+//login
 const login = async (req, res, next) => {
   let username = req.body.username;
   let password = req.body.password;
@@ -154,8 +173,7 @@ const login = async (req, res, next) => {
   }
 };
  
-
- //view all user details
+ //view all user (IN DATABASE) details
 const viewAllUser = (req,res,next)=>{
     let query = `SELECT user_id, username, user_name, user_contactNo, user_status FROM user_tbl`
     database.db.query(query, (err, rows, result)=>{
@@ -182,7 +200,7 @@ const viewAllUser = (req,res,next)=>{
     })
 }
 
- //view user details
+ //view specific user details
  const viewUserDetails = (req,res,next)=>{
 
   const userId = req.params.id;
@@ -213,7 +231,7 @@ const viewAllUser = (req,res,next)=>{
 }
 
   //update
-  const updateUser = (req, res, next) => {
+const updateUser = (req, res, next) => {
     const userId = req.params.id;
     const username = req.body.username;
     const password = req.body.password;
@@ -324,33 +342,30 @@ const viewAllUser = (req,res,next)=>{
     });
   };
   
-
-//delete
-const deleteUser = (req, res, next) => {
+//togglable user status
+const statUser = (req, res, next) => {
   let userId = req.params.id;
-  if (userId == "" || userId == null) {
-    
+
+  if (userId === '' || userId === null) {
     res.status(404).json({
       successful: false,
-      message: "User id is not found",
+      message: 'User id is not found',
     });
   } else {
-    let query = `SELECT user_id FROM user_tbl WHERE user_id = ${userId}`;
-    
-    
-    database.db.query(query, (err, rows, result) => {
+    let selectQuery = `SELECT user_id, user_status FROM user_tbl WHERE user_id = ${userId}`;
+
+    database.db.query(selectQuery, (err, rows) => {
       if (err) {
-        
         res.status(500).json({
           successful: false,
           message: err,
         });
       } else {
         if (rows.length > 0) {
-          
-          let deleteQuery = `DELETE FROM user_tbl WHERE user_id = ${userId}`;
-          
-          database.db.query(deleteQuery, (err, rows, result) => {
+          let updatedStatus = rows[0].user_status === 'Active' ? 'Inactive' : 'Active';
+          let updateQuery = `UPDATE user_tbl SET user_status = '${updatedStatus}' WHERE user_id = ${userId}`;
+
+          database.db.query(updateQuery, (err, result) => {
             if (err) {
               res.status(500).json({
                 successful: false,
@@ -359,14 +374,14 @@ const deleteUser = (req, res, next) => {
             } else {
               res.status(200).json({
                 successful: true,
-                message: "User is successfully deleted!",
+                message: `User status successfully updated to ${updatedStatus}.`,
               });
             }
           });
         } else {
           res.status(400).json({
             successful: false,
-            message: "User id does not exist.",
+            message: 'User id does not exist.',
           });
         }
       }
@@ -381,5 +396,5 @@ module.exports = {
     viewUserDetails,
     updateUser,
     login,
-    deleteUser
+    statUser
 }

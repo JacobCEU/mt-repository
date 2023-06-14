@@ -8,6 +8,6 @@ storeRouter.post('/add-store', storeController.addStore);
 storeRouter.get('/view/all', storeController.viewAllStores);
 storeRouter.get('/view/:id', storeController.viewStoreDetails);
 storeRouter.put('/update/:id', storeController.updateStore);
-storeRouter.delete('/delete/:id', storeController.deleteStore);
+storeRouter.put('/status/:id', storeController.statStore);
 
 module.exports = storeRouter;
