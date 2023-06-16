@@ -142,7 +142,7 @@ const login = async (req, res, next) => {
       message: 'Invalid input',
     });
   } else {
-    let searchQuery = `SELECT password FROM user_tbl WHERE username = '${username}'`;
+    let searchQuery = `SELECT password, user_status FROM user_tbl WHERE username = '${username}'`;
 
     database.db.query(searchQuery, async (err, rows) => {
       if (err) {
@@ -158,13 +158,21 @@ const login = async (req, res, next) => {
           });
         } else {
           let storedPassword = rows[0].password;
+          let userStatus = rows[0].user_status;
           let isPasswordMatched = await bcrypt.compare(password, storedPassword);
 
           if (isPasswordMatched) {
-            res.status(200).json({
-              successful: true,
-              message: 'Logged in successfully',
-            });
+            if (userStatus === 'Inactive') {
+              res.status(200).json({
+                successful: true,
+                message: 'Logged in successfully! WARNING: Your status is INACTIVE, Please reach out to your nearest Pera Express store branch to update your account\'s status',
+              });
+            } else {
+              res.status(200).json({
+                successful: true,
+                message: 'Logged in successfully',
+              });
+            }
           } else {
             res.status(500).json({
               successful: false,
@@ -176,6 +184,7 @@ const login = async (req, res, next) => {
     });
   }
 };
+
  
 //view all user (IN DATABASE) details
 const viewAllUser = (req,res,next)=>{
