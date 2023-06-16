@@ -25,6 +25,11 @@ const addUser = async (req, res, next) => {
       successful: false,
       message: 'User has incomplete credentials.',
     });
+  } else if (username.includes(' ')) {
+    res.status(400).json({
+      successful: false,
+      message: 'Username must not contain spaces.',
+    });
   } else {
     let userCheckQuery = `SELECT user_contactNo FROM user_tbl WHERE user_contactNo = '${userContactNo}'`;
     let usernameCheckQuery = `SELECT username FROM user_tbl WHERE username = '${username}'`;
@@ -126,7 +131,6 @@ const addUser = async (req, res, next) => {
   }
 };
 
-
 //login
 const login = async (req, res, next) => {
   let username = req.body.username;
@@ -173,7 +177,7 @@ const login = async (req, res, next) => {
   }
 };
  
- //view all user (IN DATABASE) details
+//view all user (IN DATABASE) details
 const viewAllUser = (req,res,next)=>{
     let query = `SELECT user_id, username, user_name, user_contactNo, user_status FROM user_tbl`
     database.db.query(query, (err, rows, result)=>{
@@ -200,7 +204,7 @@ const viewAllUser = (req,res,next)=>{
     })
 }
 
- //view specific user details
+//view specific user details
  const viewUserDetails = (req,res,next)=>{
 
   const userId = req.params.id;
@@ -230,7 +234,7 @@ const viewAllUser = (req,res,next)=>{
     })
 }
 
-  //update
+//update
 const updateUser = (req, res, next) => {
     const userId = req.params.id;
     const username = req.body.username;
@@ -240,6 +244,11 @@ const updateUser = (req, res, next) => {
       return res.status(400).json({
         successful: false,
         message: 'Some inputs are missing',
+      });
+    } else if (username.includes(' ')) {
+      return res.status(400).json({
+        successful: false,
+        message: 'New username must not contain spaces.',
       });
     }
   
@@ -340,8 +349,8 @@ const updateUser = (req, res, next) => {
         });
       });
     });
-  };
-  
+};
+    
 //togglable user status
 const statUser = (req, res, next) => {
   let userId = req.params.id;
