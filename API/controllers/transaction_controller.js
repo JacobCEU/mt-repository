@@ -111,6 +111,16 @@ const transactionModel = require('../models/transaction.model')
                   });
                 }
 
+                const maxDate = new Date();
+                maxDate.setDate(maxDate.getDate() + 30); // Adding 30 days to the current date
+
+                if (new Date(receiveDate) > maxDate) {
+                  return res.status(400).json({
+                    successful: false,
+                    message: "The receive date cannot be more than 30 days.",
+                  });
+                }
+
                 let insertQuery = `INSERT INTO transaction_tbl SET ?`;
                 let transactionObj = transactionModel.transaction_model(
                   transId,
@@ -145,6 +155,7 @@ const transactionModel = require('../models/transaction.model')
     });
   }
 };
+
 
 
  //view all transaction
