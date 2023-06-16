@@ -171,7 +171,7 @@ const viewAllTransaction = (req,res,next)=>{
     return;
   }
 
-    let query = `SELECT transaction_id, recipient_name, recipient_contactNo, transaction_amt, transaction_date, receive_date FROM transaction_tbl WHERE user_id = '${userId}'`
+    let query = `SELECT transaction_id, recipient_name, recipient_contactNo, transaction_amt, transaction_date, receive_date, transaction_status FROM transaction_tbl WHERE user_id = '${userId}'`
     database.db.query(query, (err, rows, result)=>{
         if (err){
             res.status(500).json({
